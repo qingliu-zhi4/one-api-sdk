@@ -1,4 +1,4 @@
-package one_api_sdk
+package OneAPISDK
 
 import (
 	"testing"
@@ -7,7 +7,7 @@ import (
 
 func TestCreateOpenAIUser(t *testing.T) {
 	clientOptions := &OneApiOptions{
-		ServerUrl:   "https://km.zhi4ai.com",
+		ServerUrl:   "",
 		HttpTimeout: time.Second * 60,
 		SystemToken: "",
 	}
@@ -23,7 +23,7 @@ func TestCreateOpenAIUser(t *testing.T) {
 
 func TestAddUserQuota(t *testing.T) {
 	clientOptions := &OneApiOptions{
-		ServerUrl:   "https://km.zhi4ai.com",
+		ServerUrl:   "",
 		HttpTimeout: time.Second * 60,
 		SystemToken: "",
 	}

@@ -1,4 +1,4 @@
-package one_api_sdk
+package OneAPISDK
 
 const (
 	userEndpoint  = "/api/user"
