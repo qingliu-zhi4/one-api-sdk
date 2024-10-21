@@ -1,6 +1,6 @@
-package OneAPISDK
+package OneApiSdk
 
-const contentType = "application/json"
+const contentTypeJson = "application/json"
 
 type CommonAPIRes struct {
 	sessionID string

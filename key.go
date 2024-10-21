@@ -1,10 +1,12 @@
-package OneAPISDK
+package OneApiSdk
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 )
 
+// AddTokenReq 添加调用OpenAPI的token的请求数据
 type AddTokenReq struct {
 	Name               string `json:"name"`
 	RemainQuota        int    `json:"remain_quota"`
@@ -16,6 +18,7 @@ type AddTokenReq struct {
 	Group              string `json:"group"`
 }
 
+// TokenInfo 查询Token的返回数据
 type TokenInfo struct {
 	UserId         int    `json:"user_id"`
 	Key            string `json:"key"`
@@ -31,24 +34,79 @@ type TokenInfo struct {
 	Subnet         string `json:"subnet"`
 }
 
-type OpenAIKeyData struct {
-	Key    string
-	Models string
-}
-
-func (c *OneApiClient) GenerateOpenAPIKey(accessToken string, req *AddTokenReq) error {
-	_, err := c.sendReq(keyEndpoint, http.MethodPost, accessToken, "", req, nil)
+// GenerateOpenAPIKey 根据用户的accessToken生成此用户的OpenAI key
+func (c *OneApiClient) GenerateOpenAPIKey(ctx context.Context, accessToken string, req *AddTokenReq) error {
+	_, err := c.sendReq(ctx, keyEndpoint, http.MethodPost, accessToken, "", req, nil)
 	if err != nil {
 		return fmt.Errorf("generate ppen API key fail: %v", err)
 	}
 	return nil
 }
 
-func (c *OneApiClient) GetOpenAPIKey(accessToken string) ([]*TokenInfo, error) {
-	data, err := c.sendReq(keyEndpoint, http.MethodGet, accessToken, "", nil, nil)
+// GetOpenAPIKey 根据用户的accessToken生成获取此用户的key信息
+func (c *OneApiClient) GetOpenAPIKey(ctx context.Context, accessToken string) ([]*TokenInfo, error) {
+	data, err := c.sendReq(ctx, keyEndpoint, http.MethodGet, accessToken, "", nil, nil)
 	if err != nil {
 		return nil, fmt.Errorf("get open API key fail: %v", err)
 	}
+
+	info := formTokenData(data)
+	return info, nil
+}
+
+// GenerateSpecificNameKey GenerateSpecificNameKey 便利接口
+// 这里需要传入根据你的用户维度，唯一命名的Key
+// 如果你自己管理key，有信心保证用户维度的Key唯一，可以传递check为false，提升效率
+func (c *OneApiClient) GenerateSpecificNameKey(ctx context.Context, accessToken string, keyName string, check bool) (*TokenInfo, error) {
+	if check {
+		info, err := c.GetSpecificNameKey(ctx, accessToken, keyName)
+		if err != nil {
+			return nil, fmt.Errorf("check openAPI key fail: %v", err)
+		}
+		if info != nil && len(info) > 0 {
+			return info[0], nil
+		}
+	}
+
+	req := &AddTokenReq{
+		Name: keyName,
+	}
+
+	if err := c.GenerateOpenAPIKey(ctx, accessToken, req); err != nil {
+		return nil, fmt.Errorf("generate specific API key fail in create: %v", err)
+	}
+
+	searchData := map[string]string{"keyword": req.Name}
+	tokenData, err := c.sendReq(ctx, searchTokenEndpoint, http.MethodGet, accessToken, "", searchData, nil)
+	if err != nil {
+		return nil, fmt.Errorf("ggenerate specific API key fail in get: %v", err)
+	}
+
+	info := formTokenData(tokenData)
+	if info == nil {
+		return nil, fmt.Errorf("ggenerate specific API key fail odd error: %v", tokenData)
+	}
+
+	return info[0], nil
+}
+
+// GetSpecificNameKey 根据OpenKey 名称查询Key
+func (c *OneApiClient) GetSpecificNameKey(ctx context.Context, accessToken string, keyName string) ([]*TokenInfo, error) {
+	searchData := map[string]string{"keyword": keyName}
+	tokenData, err := c.sendReq(ctx, searchTokenEndpoint, http.MethodGet, accessToken, "", searchData, nil)
+	if err != nil {
+		return nil, fmt.Errorf("ggenerate specific API key fail in get: %v", err)
+	}
+
+	info := formTokenData(tokenData)
+	if info == nil {
+		return nil, fmt.Errorf("ggenerate specific API key fail odd error: %v", tokenData)
+	}
+
+	return info, nil
+}
+
+func formTokenData(data *CommonAPIRes) []*TokenInfo {
 	returnData := data.res.Data.([]interface{})
 	info := make([]*TokenInfo, len(returnData))
 
@@ -76,5 +134,5 @@ func (c *OneApiClient) GetOpenAPIKey(accessToken string) ([]*TokenInfo, error) {
 		}
 	}
 
-	return info, nil
+	return info
 }
